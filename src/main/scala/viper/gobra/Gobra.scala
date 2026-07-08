@@ -352,6 +352,8 @@ class GobraFrontend {
 }
 
 object GobraRunner extends GobraFrontend with StrictLogging {
+  var verifierErrors: Vector[VerifierError] = Vector()
+
   def main(args: Array[String]): Unit = {
     val executor: GobraExecutionContext = new DefaultGobraExecutionContext()
     val verifier = createVerifier()
@@ -371,8 +373,14 @@ object GobraRunner extends GobraFrontend with StrictLogging {
             0
           } else {
             verifier.verifyAllPackages(config)(executor) match {
-              case VerifierResult.Failure(_) => 1
-              case _ => 0
+              case VerifierResult.Failure(errors) => {
+                verifierErrors = errors
+                1
+              }
+              case _ => {
+                verifierErrors = Vector()
+                0
+              }
             }
           }
       }
@@ -394,7 +402,7 @@ object GobraRunner extends GobraFrontend with StrictLogging {
         exitCode = 1
     } finally {
       executor.terminate()
-      sys.exit(exitCode)
+      // DO NOT CALL sys.exit
     }
   }
 }

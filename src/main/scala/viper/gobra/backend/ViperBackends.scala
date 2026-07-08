@@ -95,6 +95,7 @@ trait SiliconBasedBackend extends ViperBackend {
 
       options ++= Vector("--setAxiomatizationFile", axiomTmpPath.toString())
     }
+    options ++= Vector("--ideModeAdvanced")
 
     options
   }

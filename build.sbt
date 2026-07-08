@@ -60,7 +60,9 @@ lazy val gobra = (project in file("."))
     // Run settings
     run / javaOptions ++= Seq(
       "-Xss128m",
-      "-Dfile.encoding=UTF-8"
+      "-Dfile.encoding=UTF-8",
+      // The following line is necessary to debug the verifier itself in IntelliJ IDEA
+      "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:5005"
     ),
 
     fork := true,
