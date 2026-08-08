@@ -13,6 +13,7 @@ import viper.silver
 import scala.annotation.unused
 
 object BackTranslator {
+  var verificationErrors: Vector[silver.verifier.VerificationError] = Vector()
 
   trait ErrorBackTranslator {
     def translate(error: silver.verifier.VerificationError): VerificationError
@@ -28,8 +29,11 @@ object BackTranslator {
   type ReasonTransformer = PartialFunction[silver.verifier.ErrorReason, VerificationErrorReason]
 
   def backTranslate(result: BackendVerifier.Result)(@unused config: Config): VerifierResult = result match {
-    case BackendVerifier.Success => VerifierResult.Success
+    case BackendVerifier.Success =>
+      verificationErrors = Vector()
+      VerifierResult.Success
     case BackendVerifier.Failure(errors, backtrack) =>
+      verificationErrors = errors
       val errorTranslator = new DefaultErrorBackTranslator(backtrack)
       VerifierResult.Failure(errors map errorTranslator.translate)
   }
