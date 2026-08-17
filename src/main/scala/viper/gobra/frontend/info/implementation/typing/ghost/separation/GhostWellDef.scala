@@ -79,6 +79,7 @@ trait GhostWellDef { this: TypeInfoImpl =>
       |  _: PSeq
       |  _: PExpressionStmt
       |  _: POutline
+      |  _: PCritical
       | _: PShortForRange
       | _: PAssForRange
     => noMessages
@@ -127,6 +128,9 @@ trait GhostWellDef { this: TypeInfoImpl =>
        | _: PPredConstructor
        | _: PUnpackSlice
     => noMessages
+
+    // resolved into PCompositeLit/PPredConstructor before type-checking; unreachable here
+    case n: PCompositeLitOrPredConstructor => violation(s"unresolved literal/predicate-constructor ambiguity: $n")
 
     case n@ ( // these are just suggestions for now. We will have to adapt then, when we decide on proper ghost separation rules.
       _: PReceive

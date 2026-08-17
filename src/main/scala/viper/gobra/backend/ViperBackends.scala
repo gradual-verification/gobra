@@ -96,6 +96,9 @@ trait SiliconBasedBackend extends ViperBackend {
       options ++= Vector("--setAxiomatizationFile", axiomTmpPath.toString())
     }
     options ++= Vector("--ideModeAdvanced")
+    config.assertTimeout.foreach { timeout =>
+      options ++= Vector(s"--assertTimeout=$timeout")
+    }
 
     options
   }
@@ -144,7 +147,7 @@ object ViperBackends {
       // the executor used to verify is expected to correspond to the one used by the server:
       assert(executor == executionContext, "a different execution context is used than expected")
       val verifierConfig = getViperVerifierConfig(exePaths, config, pkgInfo)
-      new ViperServer(initializedServer, verifierConfig)(executor)
+      new ViperServer(initializedServer, verifierConfig, config.abortSignal)(executor)
     }
 
     /** returns an existing ViperCoreServer instance or otherwise creates a new one */
