@@ -36,3 +36,5 @@ src/main/java/viper/gobra/frontend/GobraLexer.java
 src/main/java/viper/gobra/frontend/GobraParser.java
 src/main/java/viper/gobra/frontend/GobraParserBaseVisitor.java
 src/main/java/viper/gobra/frontend/GobraParserVisitor.java
+
+/ai_suite
