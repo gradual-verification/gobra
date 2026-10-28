@@ -26,6 +26,7 @@ import viper.gobra.reporting._
 import viper.gobra.translator.Translator
 import viper.gobra.util.Violation.{KnownZ3BugException, LogicException, UglyErrorMessage}
 import viper.gobra.util.{DefaultGobraExecutionContext, GobraExecutionContext}
+import viper.silicon.logger.SymbExLogger
 import viper.silver.{ast => vpr}
 
 import java.time.format.DateTimeFormatter
@@ -361,6 +362,7 @@ class Gobra extends GoVerifier with GoIdeVerifier {
 
   private def performVerification(config: Config, pkgInfo: PackageInfo, viperTask: BackendVerifier.Task)(implicit executor: GobraExecutionContext): IntermediateVerifierResult[VerifierResult] = {
     if (config.shouldVerify) {
+      SymbExLogger.sourceNameFinder = Some(SourceNames.fromViper)
       val fut = BackendVerifier.verify(viperTask, pkgInfo)(config)
         .map(BackTranslator.backTranslate(_)(config))
         .toEither
@@ -395,6 +397,10 @@ object GobraRunner extends GobraFrontend with StrictLogging {
   var verifierErrors: Vector[VerifierError] = Vector()
 
   def main(args: Array[String]): Unit = {
+    main(args, calledFromIde = false)
+  }
+
+  def main(args: Array[String], calledFromIde: Boolean): Unit = {
     val executor: GobraExecutionContext = new DefaultGobraExecutionContext()
     val verifier = createVerifier()
     var exitCode = 0
@@ -450,7 +456,9 @@ object GobraRunner extends GobraFrontend with StrictLogging {
         exitCode = 1
     } finally {
       executor.terminate()
-      // DO NOT CALL sys.exit
+      if (!calledFromIde) {
+        sys.exit(exitCode)
+      }
     }
   }
 }

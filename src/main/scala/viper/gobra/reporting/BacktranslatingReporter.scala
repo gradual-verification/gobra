@@ -8,17 +8,22 @@ package viper.gobra.reporting
 
 import viper.gobra.frontend.Config
 import viper.gobra.reporting.BackTranslator.BackTrackInfo
-import viper.silver.reporter.{Message, PluginAwareReporter}
+import viper.silver.reporter.{ExecutionTraceReport, Message, PluginAwareReporter}
 
 trait MessageBackTranslator {
   def translate(msg: Message): GobraMessage
 }
 
-case class BacktranslatingReporter(reporter: GobraReporter, backTrackInfo: BackTrackInfo, config: Config) extends PluginAwareReporter {
+case class BacktranslatingReporter(reporter: GobraReporter, backTrackInfo: BackTrackInfo, config: Config,
+                                  jsonLogWriter: Option[JsonSymbExLogWriter] = None) extends PluginAwareReporter {
   override val name: String = reporter.name
   private val msgTranslator: MessageBackTranslator = new DefaultMessageBackTranslator(backTrackInfo, config)
 
   override def doReport(msg: Message): Unit = {
+    msg match {
+      case trace: ExecutionTraceReport => jsonLogWriter.foreach(_.write(trace))
+      case _ =>
+    }
     reporter.report(msgTranslator.translate(msg))
   }
 }

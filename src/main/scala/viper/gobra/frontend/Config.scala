@@ -73,6 +73,7 @@ object ConfigDefaults {
   val DefaultHyperMode: Hyper.Mode = Hyper.Disabled
   val DefaultEnableExperimentalHyperFeatures: Boolean = false
   val DefaultNoVerify: Boolean = false
+  val DefaultLogJson: Boolean = false
   val DefaultNoStreamErrors: Boolean = false
   val DefaultParseAndTypeCheckMode: TaskManagerMode = TaskManagerMode.Parallel
   val DefaultRequireTriggers: Boolean = false
@@ -236,6 +237,7 @@ case class Config(
                    // `None` indicates that no mode has been specified and instructs Gobra to use the default hyper mode
                    hyperMode: Option[Hyper.Mode] = None,
                    enableExperimentalHyperFeatures: Boolean = ConfigDefaults.DefaultEnableExperimentalHyperFeatures,
+                   logJson: Boolean = ConfigDefaults.DefaultLogJson,
                    noStreamErrors: Boolean = ConfigDefaults.DefaultNoStreamErrors,
                    parseAndTypeCheckMode: TaskManagerMode = ConfigDefaults.DefaultParseAndTypeCheckMode,
                    // when enabled, all quantifiers without triggers are rejected
@@ -292,6 +294,7 @@ case class Config(
       },
       enableExperimentalHyperFeatures = enableExperimentalHyperFeatures || input.enableExperimentalHyperFeatures.value.contains(true),
       shouldVerify = shouldVerify && !input.noVerify.value.contains(true),
+      logJson = logJson || input.logJson.value.contains(true),
       noStreamErrors = noStreamErrors || input.noStreamErrors.value.contains(true),
       requireTriggers = requireTriggers || input.requireTriggers.value.contains(true),
       disableSetAxiomatization = disableSetAxiomatization || input.disableSetAxiomatization.value.contains(true),
@@ -351,6 +354,7 @@ case class Config(
       "respectFunctionPrePermAmounts" -> respectFunctionPrePermAmounts,
       "enableExperimentalFriendClauses" -> enableExperimentalFriendClauses,
       "assertTimeout" -> assertTimeout.map(_.toString).getOrElse("(none)"),
+      "logJson" -> logJson,
       "noStreamErrors" -> noStreamErrors,
       "parseAndTypeCheckMode" -> parseAndTypeCheckMode,
     )
@@ -421,6 +425,7 @@ case class BaseConfig(gobraDirectory: Option[Path] = ConfigDefaults.DefaultGobra
                       hyperMode: Option[Hyper.Mode] = None,
                       enableExperimentalHyperFeatures: Boolean = ConfigDefaults.DefaultEnableExperimentalHyperFeatures,
                       noVerify: Boolean = ConfigDefaults.DefaultNoVerify,
+                      logJson: Boolean = ConfigDefaults.DefaultLogJson,
                       noStreamErrors: Boolean = ConfigDefaults.DefaultNoStreamErrors,
                       parseAndTypeCheckMode: TaskManagerMode = ConfigDefaults.DefaultParseAndTypeCheckMode,
                       requireTriggers: Boolean = ConfigDefaults.DefaultRequireTriggers,
@@ -509,6 +514,7 @@ case class InputConfig(
   enableExperimentalHyperFeatures: InputConfigOption[Boolean] = InputConfigOption(Config.enableExperimentalHyperFeaturesOptionName, None),
   requireTriggers: InputConfigOption[Boolean] = InputConfigOption("requireTriggers", None),
   noVerify: InputConfigOption[Boolean] = InputConfigOption("noVerify", None),
+  logJson: InputConfigOption[Boolean] = InputConfigOption("logJson", None),
   noStreamErrors: InputConfigOption[Boolean] = InputConfigOption("noStreamErrors", None),
   disableCheckTerminationPureFns: InputConfigOption[Boolean] = InputConfigOption("disableCheckTerminationPureFns", None),
   parseAndTypeCheckMode: InputConfigOption[TaskManagerMode] = InputConfigOption("parseAndTypeCheckMode", None),
@@ -571,6 +577,7 @@ case class InputConfig(
     enableExperimentalHyperFeatures = enableExperimentalHyperFeatures orElse other.enableExperimentalHyperFeatures,
     requireTriggers = requireTriggers orElse other.requireTriggers,
     noVerify = noVerify orElse other.noVerify,
+    logJson = logJson orElse other.logJson,
     noStreamErrors = noStreamErrors orElse other.noStreamErrors,
     disableCheckTerminationPureFns = disableCheckTerminationPureFns orElse other.disableCheckTerminationPureFns,
     parseAndTypeCheckMode = parseAndTypeCheckMode orElse other.parseAndTypeCheckMode,
@@ -674,6 +681,7 @@ case class InputConfig(
       enableExperimentalHyperFeatures = enableExperimentalHyperFeatures orElse other.enableExperimentalHyperFeatures,
       requireTriggers = requireTriggers orElse other.requireTriggers,
       noVerify = mergeOr(noVerify, other.noVerify),
+      logJson = mergeOr(logJson, other.logJson),
       noStreamErrors = mergeOr(noStreamErrors, other.noStreamErrors),
       disableCheckTerminationPureFns = disableCheckTerminationPureFns orElse other.disableCheckTerminationPureFns,
       parseAndTypeCheckMode = parseAndTypeCheckMode orElse other.parseAndTypeCheckMode,
@@ -981,6 +989,7 @@ case class InputConfig(
     hyperMode = hyperMode.value,
     enableExperimentalHyperFeatures = enableExperimentalHyperFeatures.value.getOrElse(false),
     noVerify = noVerify.value.getOrElse(false),
+    logJson = logJson.value.getOrElse(ConfigDefaults.DefaultLogJson),
     noStreamErrors = noStreamErrors.value.getOrElse(false),
     parseAndTypeCheckMode = parseAndTypeCheckMode.value.getOrElse(ConfigDefaults.DefaultParseAndTypeCheckMode),
     requireTriggers = requireTriggers.value.getOrElse(ConfigDefaults.DefaultRequireTriggers),
@@ -1107,6 +1116,7 @@ trait RawConfig {
     mceMode = baseConfig.mceMode,
     hyperMode = baseConfig.hyperMode,
     enableExperimentalHyperFeatures = baseConfig.enableExperimentalHyperFeatures,
+    logJson = baseConfig.logJson,
     noStreamErrors = baseConfig.noStreamErrors,
     parseAndTypeCheckMode = baseConfig.parseAndTypeCheckMode,
     requireTriggers = baseConfig.requireTriggers,
@@ -1712,6 +1722,13 @@ class ScallopGobraConfig(arguments: Seq[String], isInputOptional: Boolean = fals
     noshort = true,
   )
 
+  val logJson: ScallopOption[Boolean] = opt[Boolean](
+    name = "logJson",
+    descr = "Export Silicon symbolic-execution logs for every method to a sibling .json file for each input file.",
+    default = Some(ConfigDefaults.DefaultLogJson),
+    noshort = true,
+  )
+
   val noStreamErrors: ScallopOption[Boolean] = opt[Boolean](
     name = "noStreamErrors",
     descr = s"Do not stream errors produced by ${GoVerifier.name} but instead print them all organized by package in the end.",
@@ -1812,6 +1829,7 @@ class ScallopGobraConfig(arguments: Seq[String], isInputOptional: Boolean = fals
     enableExperimentalHyperFeatures = toInputConfigOption(enableExperimentalHyperFeatures),
     requireTriggers = toInputConfigOption(requireTriggers),
     noVerify = toInputConfigOption(noVerify),
+    logJson = toInputConfigOption(logJson),
     noStreamErrors = toInputConfigOption(noStreamErrors),
     disableCheckTerminationPureFns = toInputConfigOption(disableCheckTerminationPureFns),
     parseAndTypeCheckMode = toInputConfigOption(parseAndTypeCheckMode),

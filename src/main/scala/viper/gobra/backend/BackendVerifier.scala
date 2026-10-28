@@ -9,10 +9,11 @@ package viper.gobra.backend
 import scalaz.EitherT
 import scalaz.Scalaz.futureInstance
 import viper.gobra.backend.ViperBackends.{CarbonBackend => Carbon}
+import viper.gobra.frontend.Source.TransformableSource
 import viper.gobra.frontend.{Config, PackageInfo}
 import viper.gobra.reporting.BackTranslator.BackTrackInfo
 import viper.gobra.reporting.IntermediateVerifierResult.IntermediateVerifierResult
-import viper.gobra.reporting.{BackTranslator, BacktranslatingReporter, ChoppedProgressMessage, NegativeVerifierResult}
+import viper.gobra.reporting.{BackTranslator, BacktranslatingReporter, ChoppedProgressMessage, JsonSymbExLogWriter, NegativeVerifierResult}
 import viper.gobra.util.{ChopperUtil, GobraExecutionContext}
 import viper.silver
 import viper.silver.verifier.VerificationResult
@@ -52,7 +53,10 @@ object BackendVerifier {
 
     val verificationResults: IntermediateVerifierResult[VerificationResult] =  {
       val verifier = config.backendOrDefault.create(exePaths, config, pkgInfo)
-      val reporter = BacktranslatingReporter(config.reporter, task.backtrack, config)
+      val jsonLogWriter = if (config.logJson) {
+        Some(new JsonSymbExLogWriter(config.packageInfoInputMap(pkgInfo).map(_.toPath)))
+      } else None
+      val reporter = BacktranslatingReporter(config.reporter, task.backtrack, config, jsonLogWriter)
 
       if (!config.shouldChop) {
         verifier.verify(config.taskName, reporter, task.program)(executor)
